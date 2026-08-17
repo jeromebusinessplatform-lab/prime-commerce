@@ -36,7 +36,12 @@ export const autocomplete = action({
     if (!res.ok) {
       const body = await res.text().catch(() => "");
       console.error(`Geoapify autocomplete error: HTTP ${res.status}`, body);
-      throw new ConvexError({ message: "Geoapify error", code: "EXTERNAL_SERVICE_ERROR" });
+      // Detailed logging to help debug
+      console.error(`Request URL: ${GEOAPIFY_BASE}/geocode/autocomplete?${params}`);
+      throw new ConvexError({ 
+        message: `Geoapify error: ${res.status} - ${body.substring(0, 100)}`, 
+        code: "EXTERNAL_SERVICE_ERROR" 
+      });
     }
 
     const data = await res.json() as {

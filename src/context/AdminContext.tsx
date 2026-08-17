@@ -1,11 +1,10 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { useAction, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api.js";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 interface AdminContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
-  sessionToken: string | null;
   login: (code: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
 }
@@ -13,38 +12,41 @@ interface AdminContextType {
 const AdminContext = createContext<AdminContextType | null>(null);
 
 export function AdminProvider({ children }: { children: React.ReactNode }) {
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const adminLogin = useAction(api.admin.login);
-  const adminSessionValid = useQuery(
-    api.adminSessions.validateSession,
-    sessionToken ? { sessionToken } : "skip"
-  );
 
   useEffect(() => {
-    const stored = localStorage.getItem("prime_admin_session");
-    if (stored) setSessionToken(stored);
+    // Check if admin is already authenticated from localStorage
+    const stored = localStorage.getItem("prime_admin_authenticated");
+    if (stored === "true") {
+      setIsAuthenticated(true);
+    }
     setIsLoading(false);
   }, []);
 
-  const isAuthenticated = !!sessionToken && adminSessionValid !== false;
-
   const login = async (code: string) => {
-    const result = await adminLogin({ accessCode: code });
-    if (result.success && result.sessionToken) {
-      localStorage.setItem("prime_admin_session", result.sessionToken);
-      setSessionToken(result.sessionToken);
+    // Simple admin access code verification in Firestore
+    // You should have a document in the 'settings' collection named 'admin_access_code'
+    try {
+      const adminCodeDoc = await getDoc(doc(db, "settings", "admin_access_code"));
+      if (adminCodeDoc.exists() && adminCodeDoc.data().value === code) {
+        localStorage.setItem("prime_admin_authenticated", "true");
+        setIsAuthenticated(true);
+        return { success: true };
+      }
+      return { success: false, error: "Invalid access code" };
+    } catch (e) {
+      return { success: false, error: "Login error" };
     }
-    return result;
   };
 
   const logout = () => {
-    localStorage.removeItem("prime_admin_session");
-    setSessionToken(null);
+    localStorage.removeItem("prime_admin_authenticated");
+    setIsAuthenticated(false);
   };
 
   return (
-    <AdminContext.Provider value={{ isAuthenticated, isLoading, sessionToken, login, logout }}>
+    <AdminContext.Provider value={{ isAuthenticated, isLoading, login, logout }}>
       {children}
     </AdminContext.Provider>
   );

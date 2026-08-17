@@ -1,10 +1,24 @@
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api.js";
 import { useCart } from "@/context/CartContext.tsx";
-import type { Doc } from "@/convex/_generated/dataModel.d.ts";
 import { ShoppingCart, Minus, Plus, Search, SlidersHorizontal } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useDebounce } from "@/hooks/use-debounce.ts";
+import { useFirestoreQuery } from "@/hooks/useFirestoreQuery.ts";
+
+// Define the product type locally since we no longer have Convex generated types
+interface Product {
+  _id: string;
+  name: string;
+  subname?: string;
+  description?: string;
+  image?: string;
+  price: number;
+  salePrice?: number;
+  stock: number;
+  available: boolean;
+  badge?: "NEW" | "SALE" | "LOW_STOCK";
+  category?: string;
+  sortOrder?: number;
+}
 
 function BadgePill({ badge }: { badge: "NEW" | "SALE" | "LOW_STOCK" }) {
   const config = {
@@ -19,7 +33,7 @@ function BadgePill({ badge }: { badge: "NEW" | "SALE" | "LOW_STOCK" }) {
   );
 }
 
-function ProductCard({ product }: { product: Doc<"products"> }) {
+function ProductCard({ product }: { product: Product }) {
   const { items, addItem, updateQuantity } = useCart();
   const cartItem = items.find((i) => i.productId === product._id);
   const qty = cartItem?.quantity ?? 0;
@@ -92,7 +106,7 @@ export default function ShopCatalog() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [sort, setSort] = useState<SortOption>("default");
   const [showSortMenu, setShowSortMenu] = useState(false);
-  const products = useQuery(api.products.list, { includeUnavailable: false });
+  const { data: products, loading } = useFirestoreQuery<Product>("products");
 
   const categories = useMemo(() => {
     if (!products) return ["All"];
@@ -109,7 +123,7 @@ export default function ShopCatalog() {
     }
     const inStock = list.filter((p) => p.stock > 0);
     const outOfStock = list.filter((p) => p.stock <= 0);
-    const sortFn = (a: Doc<"products">, b: Doc<"products">) => {
+    const sortFn = (a: Product, b: Product) => {
       if (sort === "price_asc") return (a.salePrice ?? a.price) - (b.salePrice ?? b.price);
       if (sort === "price_desc") return (b.salePrice ?? b.price) - (a.salePrice ?? a.price);
       if (sort === "name_asc") return a.name.localeCompare(b.name);
@@ -154,7 +168,7 @@ export default function ShopCatalog() {
       </div>
       {showSortMenu && <div className="fixed inset-0 z-10" onClick={() => setShowSortMenu(false)} />}
       <div className="p-2">
-        {!products ? (
+        {loading ? (
           <div className="grid grid-cols-3 gap-2">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="bg-white rounded-xl border border-gray-200 aspect-[3/5] animate-pulse" />)}</div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-12 text-gray-400">
