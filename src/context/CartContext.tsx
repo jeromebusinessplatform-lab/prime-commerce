@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
-import type { Id } from "@/convex/_generated/dataModel.d.ts";
 
 interface CartItem {
-  productId: Id<"products">;
+  productId: string;
   productName: string;
   unitPrice: number;
   image?: string;
@@ -13,9 +12,9 @@ interface CartItem {
 interface CartContextType {
   items: CartItem[];
   addItem: (item: Omit<CartItem, "selected">) => void;
-  updateQuantity: (productId: Id<"products">, quantity: number) => void;
-  removeItem: (productId: Id<"products">) => void;
-  toggleSelect: (productId: Id<"products">) => void;
+  updateQuantity: (productId: string, quantity: number) => void;
+  removeItem: (productId: string) => void;
+  toggleSelect: (productId: string) => void;
   selectAll: () => void;
   deselectAll: () => void;
   clearCart: () => void;
@@ -24,6 +23,7 @@ interface CartContextType {
   subtotal: number;
   selectedSubtotal: number;
 }
+...
 
 const CartContext = createContext<CartContextType | null>(null);
 
