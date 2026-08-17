@@ -23,7 +23,6 @@ interface CartContextType {
   subtotal: number;
   selectedSubtotal: number;
 }
-...
 
 const CartContext = createContext<CartContextType | null>(null);
 
@@ -44,7 +43,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const updateQuantity = useCallback((productId: Id<"products">, quantity: number) => {
+  const updateQuantity = useCallback((productId: string, quantity: number) => {
     if (quantity <= 0) {
       setItems((prev) => prev.filter((i) => i.productId !== productId));
     } else {
@@ -54,11 +53,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const removeItem = useCallback((productId: Id<"products">) => {
+  const removeItem = useCallback((productId: string) => {
     setItems((prev) => prev.filter((i) => i.productId !== productId));
   }, []);
 
-  const toggleSelect = useCallback((productId: Id<"products">) => {
+  const toggleSelect = useCallback((productId: string) => {
     setItems((prev) =>
       prev.map((i) => (i.productId === productId ? { ...i, selected: !i.selected } : i))
     );
